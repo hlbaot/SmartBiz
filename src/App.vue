@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import Auth from "./pages/Auth/home.vue";
+import { RouterView } from "vue-router";
 </script>
 
 <template>
-  <Auth />
+  <RouterView />
 </template>
 
 <style src="./style.scss" lang="scss">
-
 </style>

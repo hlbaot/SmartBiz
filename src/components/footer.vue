@@ -1,3 +1,11 @@
+<script setup lang="ts">
+const emit = defineEmits<{
+    (e: "open-login"): void;
+    (e: "open-register"): void;
+}>();
+
+</script>
+
 <template>
     <footer class="footer">
         <div class="footer__grid">
@@ -14,9 +22,9 @@
 
             <div class="footer__group">
                 <h4 class="footer__heading">Liên kết</h4>
-                <a href="#" class="footer__link">Trang chủ</a>
-                <a href="#" class="footer__link">Đăng nhập</a>
-                <a href="#" class="footer__link">Đăng ký</a>
+                <a href="" class="footer__link">Trang chủ</a>
+                <a  @click.stop="emit('open-login')" class="footer__link hover:cursor-pointer">Đăng nhập</a>
+                <a  @click.stop="emit('open-register')" class="footer__link hover:cursor-pointer">Đăng ký</a>
             </div>
 
             <div class="footer__group">

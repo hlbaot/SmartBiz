@@ -3,10 +3,35 @@ import AOS from "aos";
 import { onMounted } from 'vue'
 import 'aos/dist/aos.css'
 import Footer from "../../components/footer.vue";
+import ModelLogin from "../../components/model_login.vue";
+import ModelRegister from "../../components/model_register.vue";
 import LightRays from "../../uiux/LightRays.vue";
-import Navbar from "../../components/navbar.vue";
+import Header from "../../components/header.vue";
 import GradientText from "../../uiux/GradientText.vue";
 import CountUp from "../../uiux/CountUp.vue";
+import { ref } from "vue";
+
+const isLoginOpen = ref(false);
+const isRegisterOpen = ref(false);
+
+const openLoginModal = () => {
+    isRegisterOpen.value = false;
+    isLoginOpen.value = true;
+};
+
+const closeLoginModal = () => {
+    isLoginOpen.value = false;
+};
+
+const openRegisterModal = () => {
+    isLoginOpen.value = false;
+    isRegisterOpen.value = true;
+};
+
+const closeRegisterModal = () => {
+    isRegisterOpen.value = false;
+};
+
 const handleStart = () => {
     console.log("Count animation started!");
 };
@@ -33,7 +58,7 @@ onMounted(() => {
         </div>
 
         <div class="auth-home__content">
-            <Navbar />
+            <Header @open-login="openLoginModal" @open-register="openRegisterModal" />
             <article class="hero">
                 <h2 class="hero__title">
                     Quản lý kinh doanh
@@ -48,7 +73,7 @@ onMounted(() => {
                     hiệu quả mọi hoạt động kinh doanh.
                 </p>
                 <div class="hero__actions">
-                    <button class="hero__button hero__button--primary">Bắt đầu miễn phí</button>
+                    <button @click="openRegisterModal" class="hero__button hero__button--primary hover:cursor-pointer">Bắt đầu miễn phí</button>
                 </div>
             </article>
 
@@ -137,8 +162,11 @@ onMounted(() => {
                 </div>
             </div>
 
-            <Footer />
+            <Footer @open-login="openLoginModal" @open-register="openRegisterModal" />
         </div>
+
+        <ModelLogin :open="isLoginOpen" @close="closeLoginModal" @open-register="openRegisterModal" />
+        <ModelRegister :open="isRegisterOpen" @close="closeRegisterModal" @open-login="openLoginModal" />
     </section>
 </template>
 
