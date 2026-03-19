@@ -1,5 +1,5 @@
 export interface ReqLogin {
-    email: string;
+    username: string;
     password: string;
 }
 
@@ -14,7 +14,7 @@ export interface ReqRegister {
     email: string;
     password: string;
     fullName: string;
-    phoneNumber: string;
+    phone: string;
 }
 
 export interface ResSendOtp {
@@ -23,9 +23,7 @@ export interface ResSendOtp {
     message?: string;
 }
 
-export interface ResRegister {
+export interface ReqVerifyOtp {
     email: string;
-    fullName: string;
-    phoneNumber: string;
-    otp: string;
+    otpCode: string;
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { ErrorMessage, Field, Form as VForm } from "vee-validate";
 import type { GenericObject } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
@@ -20,10 +20,13 @@ const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 const isSubmitting = ref(false);
 const submitError = ref("");
-const otpCode = ref("");
 const isOtpStep = ref(false);
 const sentOtpCode = ref("");
 const pendingRegisterPayload = ref<ReqRegister | null>(null);
+const otpDigits = ref(["", "", "", "", "", ""]);
+const otpInputs = ref<HTMLInputElement[]>([]);
+const otpCountdown = ref(60);
+let otpTimer: number | null = null;
 
 const registerSchema = toTypedSchema(z.object({
     fullName: z.string().min(1, "Vui lòng nhập họ tên"),
@@ -47,6 +50,8 @@ const initialValues = computed(() => ({
     confirmPassword: ""
 }));
 
+const otpCode = computed(() => otpDigits.value.join(""));
+
 const lockBodyScroll = (locked: boolean) => {
     if (typeof document === "undefined") {
         return;
@@ -59,10 +64,97 @@ const lockBodyScroll = (locked: boolean) => {
 };
 
 const resetOtpState = () => {
-    otpCode.value = "";
     isOtpStep.value = false;
     sentOtpCode.value = "";
     pendingRegisterPayload.value = null;
+    otpDigits.value = ["", "", "", "", "", ""];
+    otpCountdown.value = 60;
+
+    if (otpTimer !== null) {
+        window.clearInterval(otpTimer);
+        otpTimer = null;
+    }
+};
+
+const startOtpCountdown = () => {
+    if (otpTimer !== null) {
+        window.clearInterval(otpTimer);
+    }
+
+    otpCountdown.value = 60;
+    otpTimer = window.setInterval(() => {
+        if (otpCountdown.value <= 1) {
+            otpCountdown.value = 0;
+            if (otpTimer !== null) {
+                window.clearInterval(otpTimer);
+                otpTimer = null;
+            }
+            return;
+        }
+
+        otpCountdown.value -= 1;
+    }, 1000);
+};
+
+const setOtpInputRef = (element: Element | { $el?: Element } | null, index: number) => {
+    if (!element) {
+        return;
+    }
+
+    const resolvedElement = "$el" in element ? element.$el : element;
+    otpInputs.value[index] = resolvedElement as HTMLInputElement;
+};
+
+const focusOtpInput = (index: number) => {
+    const input = otpInputs.value[index];
+    if (input) {
+        input.focus();
+        input.select();
+    }
+};
+
+const handleOtpInput = (event: Event, index: number) => {
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/\D/g, "");
+    const nextDigit = sanitized.slice(-1);
+
+    otpDigits.value[index] = nextDigit;
+    input.value = nextDigit;
+
+    if (nextDigit && index < otpDigits.value.length - 1) {
+        focusOtpInput(index + 1);
+    }
+};
+
+const handleOtpKeydown = (event: KeyboardEvent, index: number) => {
+    if (event.key === "Backspace" && !otpDigits.value[index] && index > 0) {
+        focusOtpInput(index - 1);
+    }
+
+    if (event.key === "ArrowLeft" && index > 0) {
+        event.preventDefault();
+        focusOtpInput(index - 1);
+    }
+
+    if (event.key === "ArrowRight" && index < otpDigits.value.length - 1) {
+        event.preventDefault();
+        focusOtpInput(index + 1);
+    }
+};
+
+const handleOtpPaste = (event: ClipboardEvent) => {
+    event.preventDefault();
+
+    const pasted = event.clipboardData?.getData("text").replace(/\D/g, "").slice(0, 6) ?? "";
+    if (!pasted) {
+        return;
+    }
+
+    otpDigits.value = otpDigits.value.map((_, index) => pasted[index] ?? "");
+
+    nextTick(() => {
+        focusOtpInput(Math.min(pasted.length, 6) - 1);
+    });
 };
 
 const handleSubmit = async (values: GenericObject) => {
@@ -74,21 +166,25 @@ const handleSubmit = async (values: GenericObject) => {
             const payload: ReqRegister = {
                 fullName: String(values.fullName ?? ""),
                 email: String(values.email ?? ""),
-                phoneNumber: String(values.phone ?? ""),
+                phone: String(values.phone ?? ""),
                 password: String(values.password ?? "")
             };
 
-            const otpResponse = await API_SendOTP(payload.email);
+            const otpResponse = await API_SendOTP(payload);
             pendingRegisterPayload.value = payload;
             sentOtpCode.value = String(otpResponse.otp ?? "");
             isOtpStep.value = true;
+            otpDigits.value = ["", "", "", "", "", ""];
+            startOtpCountdown();
             submitError.value = otpResponse.otp
                 ? "Mã OTP đã được gửi tới email của bạn. Vui lòng nhập mã để hoàn tất đăng ký."
                 : "OTP đã được gửi. Vui lòng nhập mã xác thực để tiếp tục.";
+            await nextTick();
+            focusOtpInput(0);
             return;
         }
 
-        if (!otpCode.value.trim()) {
+        if (otpCode.value.length < 6) {
             submitError.value = "Vui lòng nhập mã OTP.";
             return;
         }
@@ -104,10 +200,13 @@ const handleSubmit = async (values: GenericObject) => {
             return;
         }
 
-        const res = await API_Register(pendingRegisterPayload.value);
-        console.log("Register success:", res);
+        await API_Register({
+            email: pendingRegisterPayload.value.email,
+            otpCode: otpCode.value.trim()
+        });
+        console.log("Register success:");
         resetOtpState();
-        emit("close");
+        emit("open-login");
     } catch (error) {
         console.error("Register submit failed:", error);
         submitError.value = isOtpStep.value
@@ -135,6 +234,9 @@ watch(
 
 onUnmounted(() => {
     lockBodyScroll(false);
+    if (otpTimer !== null) {
+        window.clearInterval(otpTimer);
+    }
 });
 
 watch(
@@ -286,13 +388,26 @@ watch(
 
                                 <div v-if="isOtpStep" class="login-form__group login-form__group--full">
                                     <label for="register-otp">Mã OTP<span class="login-form__required">*</span></label>
-                                    <input
-                                        id="register-otp"
-                                        v-model="otpCode"
-                                        type="text"
-                                        class="login-form__input"
-                                        placeholder="Nhập mã OTP đã gửi về email"
-                                    />
+                                    <div class="login-form__otp-meta">
+                                        <span class="login-form__otp-hint">Nhập 6 chữ số đã gửi về email của bạn.</span>
+                                        <span class="login-form__otp-timer">{{ otpCountdown }}s</span>
+                                    </div>
+                                    <div class="login-form__otp-grid">
+                                        <input
+                                            v-for="(digit, index) in otpDigits"
+                                            :key="index"
+                                            :ref="element => setOtpInputRef(element, index)"
+                                            :value="digit"
+                                            type="text"
+                                            inputmode="numeric"
+                                            autocomplete="one-time-code"
+                                            maxlength="1"
+                                            class="login-form__otp-input"
+                                            @input="handleOtpInput($event, index)"
+                                            @keydown="handleOtpKeydown($event, index)"
+                                            @paste="handleOtpPaste"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 

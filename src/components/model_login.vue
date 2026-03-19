@@ -30,12 +30,12 @@ type LoginFormActions = {
 };
 
 const loginSchema = toTypedSchema(z.object({
-    email: z.string().email("Email không hợp lệ"),
+    username: z.string().min(1, "Vui lòng nhập tài khoản"),
     password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự")
 }));
 
 const initialValues = computed<ReqLogin>(() => ({
-    email: "",
+    username: "",
     password: ""
 }));
 
@@ -52,22 +52,22 @@ const lockBodyScroll = (locked: boolean) => {
 
 const handleSubmit = async (values: GenericObject, actions: LoginFormActions) => {
     const payload: ReqLogin = {
-        email: String(values.email ?? ""),
+        username: String(values.username ?? ""),
         password: String(values.password ?? "")
     };
 
     submitError.value = "";
-    actions.setFieldError("email", undefined);
+    actions.setFieldError("username", undefined);
     actions.setFieldError("password", undefined);
     isSubmitting.value = true;
 
     try {
         const res = await API_Login(payload);
-        Cookies.set("token", res.token, { expires: 7 });
-        Cookies.set("role", res.role, { expires: 7 });
+        Cookies.set("token", res.token);
+        Cookies.set("role", res.role);
         sessionStorage.setItem("fullname", res.fullName);
         
-        console.log("Login success:", res);
+        console.log("Login success");
         emit("close");
         await router.push(resolveRoleRoute(res.role));
     } catch (error) {
@@ -79,11 +79,12 @@ const handleSubmit = async (values: GenericObject, actions: LoginFormActions) =>
 
             if (
                 message.includes("email") ||
+                message.includes("username") ||
                 message.includes("account") ||
                 message.includes("tài khoản") ||
                 status === 404
             ) {
-                actions.setFieldError("email", "Tài khoản không tồn tại hoặc không hợp lệ.");
+                actions.setFieldError("username", "Tài khoản không tồn tại hoặc không hợp lệ.");
                 return;
             }
 
@@ -174,10 +175,10 @@ onUnmounted(() => {
                 <VForm :validation-schema="loginSchema" :initial-values="initialValues" class="login-form"
                     @submit="handleSubmit">
                     <div class="login-form__group">
-                        <label for="login-email">Email<span class="login-form__required">*</span></label>
-                        <Field id="login-email" name="email" type="email" class="login-form__input"
-                            placeholder="name@example.com" />
-                        <ErrorMessage name="email" class="login-form__error" />
+                        <label for="login-username">Username<span class="login-form__required">*</span></label>
+                        <Field id="login-username" name="username" type="text" class="login-form__input"
+                            placeholder="Nhập username của bạn" />
+                        <ErrorMessage name="username" class="login-form__error" />
                     </div>
 
                     <div class="login-form__group">

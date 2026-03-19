@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { ReqLogin, ReqRegister, ResRegister, ResSendOtp } from "../interface/auth";
+import type { ReqLogin, ReqRegister, ReqVerifyOtp, ResSendOtp } from "../interface/auth";
 import { API } from "./base_api";
 
 // đăng nhập
@@ -15,9 +15,9 @@ export const API_Login = async (loginData: ReqLogin) => {
 }
 
 //gửi otp
-export const API_SendOTP = async (email: string) => {
+export const API_SendOTP = async (registerData: ReqRegister) => {
     try {
-        const response = await axios.post(`${API}/auth/send-otp`, { email });
+        const response = await axios.post(`${API}/auth/register`, registerData);
         return response.data as ResSendOtp;
     }
     catch (error) {
@@ -27,10 +27,10 @@ export const API_SendOTP = async (email: string) => {
 }
 
 // đăng ký
-export const API_Register = async (registerData: ReqRegister) => {
+export const API_Register = async (registerData: ReqVerifyOtp) => {
     try {
-        const response = await axios.post(`${API}/auth/register`, registerData);
-        return response.data as ResRegister;
+        const response = await axios.post(`${API}/auth/register/verify`, registerData);
+        return response.data;
     }
     catch (error) {
         console.error("Register failed:", error);

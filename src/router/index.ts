@@ -10,10 +10,15 @@ const StaffPage = () => import("../pages/Staff/staff.vue");
 
 const roleRouteMap = {
     ADMIN: "/admin",
+    BUSINESS_ADMIN: "/admin",
     CASHIER: "/cashier",
+    BUSINESS_CASHIER: "/cashier",
     CHEF: "/chef",
-    OWNER: "/owner",
-    STAFF: "/staff"
+    BUSINESS_CHEF: "/chef",
+    OWNER: "/business-owner",
+    BUSINESS_OWNER: "/business-owner",
+    STAFF: "/staff",
+    BUSINESS_STAFF: "/staff"
 } as const;
 
 type AppRole = keyof typeof roleRouteMap;
@@ -23,7 +28,12 @@ const normalizeRole = (role: string | undefined): AppRole | null => {
         return null;
     }
 
-    const normalized = role.replace(/^"|"$/g, "").toUpperCase();
+    const normalized = role
+        .replace(/^"|"$/g, "")
+        .replace(/^ROLE_/i, "")
+        .replace(/[-\s]+/g, "_")
+        .toUpperCase();
+
     return normalized in roleRouteMap ? (normalized as AppRole) : null;
 };
 
@@ -43,32 +53,37 @@ const router = createRouter({
         {
             path: "/admin",
             name: "admin",
+            alias: ["/business-admin"],
             component: AdminPage,
-            meta: { requiresAuth: true, roles: ["ADMIN"] }
+            meta: { requiresAuth: true, roles: ["ADMIN", "BUSINESS_ADMIN"] }
         },
         {
             path: "/cashier",
             name: "cashier",
+            alias: ["/business-cashier"],
             component: CashierPage,
-            meta: { requiresAuth: true, roles: ["CASHIER"] }
+            meta: { requiresAuth: true, roles: ["CASHIER", "BUSINESS_CASHIER"] }
         },
         {
             path: "/chef",
             name: "chef",
+            alias: ["/business-chef"],
             component: ChefPage,
-            meta: { requiresAuth: true, roles: ["CHEF"] }
+            meta: { requiresAuth: true, roles: ["CHEF", "BUSINESS_CHEF"] }
         },
         {
-            path: "/owner",
+            path: "/business-owner",
             name: "owner",
+            alias: ["/owner"],
             component: OwnerPage,
-            meta: { requiresAuth: true, roles: ["OWNER"] }
+            meta: { requiresAuth: true, roles: ["OWNER", "BUSINESS_OWNER"] }
         },
         {
             path: "/staff",
             name: "staff",
+            alias: ["/business-staff"],
             component: StaffPage,
-            meta: { requiresAuth: true, roles: ["STAFF"] }
+            meta: { requiresAuth: true, roles: ["STAFF", "BUSINESS_STAFF"] }
         },
         {
             path: "/:pathMatch(.*)*",
