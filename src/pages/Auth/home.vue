@@ -10,6 +10,11 @@ import Header from "../../components/header.vue";
 import GradientText from "../../uiux/GradientText.vue";
 import CountUp from "../../uiux/CountUp.vue";
 import { ref } from "vue";
+import Cookies from "js-cookie";
+import { useRouter } from "vue-router";
+import { resolveRoleRoute } from "../../router";
+
+const router = useRouter();
 
 const isLoginOpen = ref(false);
 const isRegisterOpen = ref(false);
@@ -44,7 +49,20 @@ onMounted(() => {
     AOS.init({
         duration: 800,
         once: true,
-    })
+    });
+
+    // Xử lý OAuth callback: backend redirect về /?token=...&role=...
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const role = params.get("role");
+
+    if (token && role) {
+        Cookies.set("token", token);
+        Cookies.set("role", role);
+        // Xóa params khỏi URL (tránh lộ token trên thanh địa chỉ)
+        window.history.replaceState({}, document.title, window.location.pathname);
+        router.push(resolveRoleRoute(role));
+    }
 })
 </script>
 
