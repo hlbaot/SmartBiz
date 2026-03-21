@@ -93,6 +93,21 @@ const router = createRouter({
 });
 
 router.beforeEach(to => {
+    // Xử lý OAuth2 callback: backend redirect về với ?token=...&role=...
+    const oauthToken = to.query.token as string | undefined;
+    const oauthRole = to.query.role as string | undefined;
+    const oauthFullName = to.query.fullName as string | undefined;
+
+    if (oauthToken && oauthRole) {
+        Cookies.set("token", oauthToken, { expires: 1 });
+        Cookies.set("role", oauthRole, { expires: 1 });
+        if (oauthFullName) {
+            sessionStorage.setItem("fullname", oauthFullName);
+        }
+        // Redirect về cùng path nhưng xóa query params (tránh lộ token trên URL)
+        return { path: to.path, query: {}, replace: true };
+    }
+
     const token = Cookies.get("token");
     const role = normalizeRole(Cookies.get("role"));
     const targetByRole = role ? roleRouteMap[role] : "/";
